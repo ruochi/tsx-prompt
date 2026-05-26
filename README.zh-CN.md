@@ -47,7 +47,11 @@ npm install tsx-prompt
 
 ## JSDoc hover —— 引用组件时，悬停即可看到完整 prompt 正文
 
-把重复说明抽成**共享组件**，在 `export function` 上写 **与 JSX 渲染正文一致的 JSDoc**：
+把重复说明抽成**共享组件**，在 `export function` 上写 **与 JSX 渲染正文一致的 JSDoc**。
+
+![在 Cursor / VS Code 悬停 `<SegmentsContract />` 即可查看完整 segments 契约](./docs/jsdoc-hover.png)
+
+*来自 [`examples/scene-prompt/ScenePrompt.tsx`](examples/scene-prompt/ScenePrompt.tsx) —— 主文件看结构，hover 看内容。*
 
 ```tsx
 /**
@@ -172,6 +176,19 @@ export function Section(props: { title: string; children?: Child }): string {
 ```
 
 也可以直接在 JSX 里写 `##` 标题。
+
+## 示例项目
+
+完整可运行示例见 [`examples/scene-prompt/`](examples/scene-prompt/)：
+
+- `ScenePrompt.tsx` — 编排 `<Message role="system|user">`
+- `components/OutputRules.tsx` — 带 **JSDoc** 的共享块（引用处 hover 看全文）
+- `components/TimelineSection.tsx` — `<If>` + `<For>` 条件口播段
+
+```bash
+npm run example   # 打印 systemRole + userRole
+npm test          # 含 example.spec.ts
+```
 
 ## API
 

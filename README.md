@@ -47,7 +47,11 @@ This is the feature that makes large prompt templates *feel* like normal TypeScr
 
 ## JSDoc hover — see the full prompt without leaving the call site
 
-Extract repeated instructions into **shared components**. Put a JSDoc block on each `export function` whose body **matches the rendered prompt text**:
+Extract repeated instructions into **shared components**. Put a JSDoc block on each `export function` whose body **matches the rendered prompt text**.
+
+![Hover `<SegmentsContract />` in Cursor / VS Code to read the full segments contract](./docs/jsdoc-hover.png)
+
+*From [`examples/scene-prompt/ScenePrompt.tsx`](examples/scene-prompt/ScenePrompt.tsx) — structure in the main file, content on hover.*
 
 ```tsx
 /**
@@ -172,6 +176,19 @@ export function Section(props: { title: string; children?: Child }): string {
 ```
 
 Or inline markdown headings directly in JSX.
+
+## Example project
+
+Full runnable sample under [`examples/scene-prompt/`](examples/scene-prompt/):
+
+- `ScenePrompt.tsx` — orchestrates `<Message role="system|user">`
+- `components/OutputRules.tsx` — shared blocks with **JSDoc** (hover at call site)
+- `components/TimelineSection.tsx` — `<If>` + `<For>` conditional timeline section
+
+```bash
+npm run example   # print systemRole + userRole to stdout
+npm test          # includes example.spec.ts
+```
 
 ## API
 
