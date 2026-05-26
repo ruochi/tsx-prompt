@@ -1,26 +1,18 @@
 /**
  * Run: npm run example
- *
- * Demonstrates Message, Smart Dedent, shared components, If/For conditional timeline.
- * Hover component refs in ScenePrompt.tsx / OutputRules.tsx for full JSDoc text.
  */
-import { renderToPromptParts } from '../../src/index'
-import { ScenePrompt } from './ScenePrompt'
+import { buildPrompt } from './buildPrompt'
 
-const parts = renderToPromptParts(
-  ScenePrompt({
-    input: {
-      sceneDesc: '  Explain the key drivers of quarterly sales growth.  ',
-      theme: '#377CFB',
-      timeline: [
-        { subtitle: 'Intro: overall trend', duration: 5 },
-        { subtitle: 'Breakdown by channel', duration: 8 },
-      ],
-    },
-  }),
-)
+const parts = buildPrompt({
+  sceneDesc: '  Explain the key drivers of quarterly sales growth.  ',
+  theme: '#377CFB',
+  timeline: [
+    { subtitle: 'Intro: overall trend', duration: 5 },
+    { subtitle: 'Breakdown by channel', duration: 8 },
+  ],
+})
 
-console.log('=== systemRole ===\n')
-console.log(parts.systemRole)
-console.log('\n=== userRole ===\n')
-console.log(parts.userRole)
+console.log('=== system ===\n')
+console.log(parts.system)
+console.log('\n=== user ===\n')
+console.log(parts.user)
