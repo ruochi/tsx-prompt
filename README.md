@@ -1,48 +1,91 @@
 # tsx-prompt
 
-Zero-dependency, type-safe JSX-based Prompt Engine for LLMs.
+[English](README.md) · [中文](README.zh-CN.md)
 
-Use TSX component composition instead of string concatenation to build prompts. Renders to plain text or chat message arrays.
+Zero-dependency, type-safe **JSX Prompt Engine** for LLMs.
 
-## Architecture
+---
 
-Two layers — core engine plus your own components:
+## Still fighting prompt strings?
 
-| Layer | Exports | Role |
-|-------|---------|------|
-| **Core** | `h`, `Fragment`, `Message`, `renderToString`, `renderToMessages`, `renderToPromptParts` | JSX runtime + message parsing |
-| **Sugar** | `If`, `For` | Optional list/conditional helpers |
-| **Your code** | `{cond && ...}`, `{arr.map()}`, custom fn components, inline `##` headings | Full JS expressiveness |
+- **Tired of** `` `...${x}...` `` spaghetti and `.join('\n')` everywhere?
+- **Sick of** copy-pasting the same system instructions across branches — and they drift out of sync?
+- **Hate** opening a 500-line template just to remember what one reusable block actually outputs?
+- **Struggling** to split `system` / `user` / `assistant` messages by hand for every API call?
+- **Annoyed** that beautiful JSX indentation turns into ugly leading spaces in the final prompt?
 
-## Install
+**tsx-prompt** lets you write prompts like UI — compose with components, render to plain text or chat message arrays. No runtime deps. A few kilobytes.
 
 ```bash
 npm install tsx-prompt
 ```
 
-## TypeScript config
+---
 
-Global config:
+## Smart Dedent — write indented JSX, ship clean prompts
 
-```json
-{
-  "compilerOptions": {
-    "jsx": "react",
-    "jsxFactory": "h",
-    "jsxFragmentFactory": "Fragment"
-  }
+Most prompt libraries force you to left-align every line or call `.trim()` yourself. **tsx-prompt bakes in Smart Dedent**:
+
+- **Indent naturally** inside nested JSX, functions, and `<Message>` blocks — the way you already write React.
+- **Automatically strips** the common leading whitespace from non-empty lines (blank lines ignored when computing indent).
+- **Normalizes** trailing space and collapses runaway blank lines so API payloads stay tight.
+- **Zero config** — every `renderToString` / `renderToMessages` path applies it for you.
+
+```tsx
+<Message role="system">
+  You are an expert.
+  ## Rules
+  - Rule one
+  - Rule two
+</Message>
+// Output starts at column 0 — no accidental 8-space prefix from your editor indent.
+```
+
+This is the feature that makes large prompt templates *feel* like normal TypeScript instead of a whitespace puzzle.
+
+---
+
+## JSDoc hover — see the full prompt without leaving the call site
+
+Extract repeated instructions into **shared components**. Put a JSDoc block on each `export function` whose body **matches the rendered prompt text**:
+
+```tsx
+/**
+ * segments[].pptSpec field rules (written to system prompt).
+ *
+ * - Must be a **non-empty markdown string**.
+ * - Describe each segment's focus, icon semantics, and layout for the slide tree.
+ */
+export function PptSpecFieldIntro() {
+  return (
+    <>
+      - Must be a **non-empty markdown string**.
+      - Describe each segment's focus, icon semantics, and layout for the slide tree.
+    </>
+  )
 }
 ```
 
-Or per-file pragma (no global jsxFactory required):
+At the usage site:
 
 ```tsx
-/** @jsx h */
-/** @jsxFrag Fragment */
-import { h, Fragment, Message, renderToPromptParts } from 'tsx-prompt';
+<PptSpecFieldIntro />
+//     ^ hover in VS Code / Cursor → full bullet list in the tooltip
 ```
 
-## Prompt parts (system + user)
+**Read the orchestration file for structure; hover for content.** No more archaeology through nested imports.
+
+---
+
+## Architecture
+
+| Layer | Exports | Role |
+|-------|---------|------|
+| **Core** | `h`, `Fragment`, `Message`, `renderToString`, `renderToMessages`, `renderToPromptParts` | JSX runtime + message parsing |
+| **Sugar** | `If`, `For` | Optional helpers (native `&&` / `.map()` work too) |
+| **Your code** | custom components, inline `##` headings, JSDoc | Full JS expressiveness |
+
+## Quick start
 
 ```tsx
 /** @jsx h */
@@ -77,9 +120,28 @@ const { systemRole, userRole } = renderToPromptParts(
 );
 ```
 
-`If` / `For` are optional helpers — native `{cond && ...}` and `{arr.map()}` work identically.
+## TypeScript config
 
-## Chat messages
+Per-file pragma (recommended):
+
+```tsx
+/** @jsx h */
+/** @jsxFrag Fragment */
+```
+
+Or global `tsconfig.json`:
+
+```json
+{
+  "compilerOptions": {
+    "jsx": "react",
+    "jsxFactory": "h",
+    "jsxFragmentFactory": "Fragment"
+  }
+}
+```
+
+## Chat messages & extensible roles
 
 ```tsx
 import { h, renderToMessages, Message } from 'tsx-prompt'
@@ -91,40 +153,14 @@ const messages = renderToMessages(
     <Message role="assistant">{'```xml\n<svg>...</svg>\n```'}</Message>
   </>,
 )
-// [{ role: 'system', content: '...' }, ...]
-```
 
-### Extensible roles
-
-`<Message>` accepts any role string and forwards extra props as metadata:
-
-```tsx
 <Message role="developer">Platform instructions.</Message>
 <Message role="tool" tool_call_id="call_abc">{"result": 42}</Message>
-// => { role: 'tool', content: '...', tool_call_id: 'call_abc' }
 ```
 
-## String output
+## Custom formatting (bring your own)
 
-```tsx
-import { h, Fragment, renderToString } from 'tsx-prompt'
-
-const text = renderToString(
-  <>
-    Write TypeScript code.
-    {true && (
-      <>
-        ### Rules:
-        {['Rule A'].map((rule, i) => `- [${i + 1}] ${rule}`)}
-      </>
-    )}
-  </>,
-)
-```
-
-## Custom formatting components
-
-Formatting helpers like `Section` are **not** built into the core. Define your own:
+`Section`, `Quote`, etc. are **not** built in — define what you need:
 
 ```tsx
 import { Fragment, renderToString, type Child } from 'tsx-prompt'
@@ -133,55 +169,24 @@ export function Section(props: { title: string; children?: Child }): string {
   const body = renderToString(<Fragment>{props.children}</Fragment>).trim()
   return body ? `## ${props.title}\n\n${body}` : `## ${props.title}`
 }
-
-export function Quote(props: { children: string }): string {
-  return props.children.split('\n').map((line) => `> ${line}`).join('\n')
-}
 ```
 
-Or use inline markdown headings directly in JSX:
-
-```tsx
-<Message role="system">
-  ## Output contract
-  - Return valid JSON only.
-</Message>
-```
+Or inline markdown headings directly in JSX.
 
 ## API
 
 **Core**
 
 - `h`, `Fragment` — JSX runtime
-- `Message` — chat role block with extensible `role` and metadata props
-- `renderToString(node)` — plain text with smart dedent
+- `Message` — chat role block (`role` + optional metadata props)
+- `renderToString(node)` — plain text + **Smart Dedent**
 - `renderToMessages(node)` — `{ role, content, ...meta }[]`
 - `renderToPromptParts(node)` — `{ systemRole, userRole, userRoleParts? }`
 
-**Syntax sugar (optional)**
+**Optional sugar**
 
-- `<If condition={boolean}>` — conditional block
-- `<For each={array} render={(item, i) => ...} separator="\n" />` — list rendering
-
-**Native JS (fully supported)**
-
-- `{condition && <Fragment>...</Fragment>}` — conditional rendering
-- `{array.map((item, i) => ...)}` — list rendering
-
-## Sync to standalone GitHub repo
-
-Develop in the DC monorepo (`packages/tsx-prompt`). To export and commit to [github.com/ruochi/tsx-prompt](https://github.com/ruochi/tsx-prompt):
-
-```bash
-# from monorepo root
-npm run export:tsx-prompt              # export to ../tsx-prompt
-npm run export:tsx-prompt -- --push    # export + git push + tag
-
-# custom path / repo
-GITHUB_REPO=ruochi/tsx-prompt ./scripts/export-tsx-prompt.sh /path/to/export --push
-```
-
-Create the empty GitHub repository before the first `--push`.
+- `<If condition={boolean}>`, `<For each={...} render={...} />`
+- Native `{cond && ...}` and `{arr.map()}` — fully supported
 
 ## License
 
