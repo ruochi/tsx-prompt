@@ -1,0 +1,37 @@
+{
+  "name": "tsx-prompt",
+  "version": "0.1.0",
+  "description": "Zero-dependency, type-safe JSX-based Prompt Engine for LLMs",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "test": "vitest run",
+    "prepublishOnly": "npm run build && npm test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ruochi/tsx-prompt.git"
+  },
+  "bugs": "https://github.com/ruochi/tsx-prompt/issues",
+  "homepage": "https://github.com/ruochi/tsx-prompt#readme",
+  "keywords": [
+    "prompt",
+    "llm",
+    "jsx",
+    "tsx",
+    "ai"
+  ],
+  "author": "ruochi (https://github.com/ruochi)",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "~5.4.2",
+    "vitest": "^2.1.9"
+  }
+}
