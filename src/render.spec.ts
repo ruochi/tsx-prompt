@@ -1,4 +1,3 @@
-/** @jsxImportSource ./jsx-runtime */
 import { describe, expect, it } from 'vitest'
 import { h, Fragment } from './h'
 import { dedent, normalizeBlankLines } from './dedent'
@@ -90,6 +89,39 @@ describe('renderToString', () => {
       h(Fragment, null, items.map((item, i) => `${i + 1}. ${item}`)),
     )
     expect(out).toBe('1. a2. b')
+  })
+
+  it('joins consecutive markdown list lines with single newline', () => {
+    const out = renderToString(
+      h(Fragment, null,
+        '- first rule',
+        '- second rule',
+      ),
+    )
+    expect(out).toBe('- first rule\n- second rule')
+  })
+
+  it('joins block strings with blank line (multiline or heading)', () => {
+    const out = renderToString(
+      h(Fragment, null,
+        '- **只输出一个**合法 JSON 根对象；**不要** Markdown 围栏；',
+        `- 根对象必须包含 \`customDrawSpec\`、\`segments\` 两个字段。
+- 第二行说明`,
+      ),
+    )
+    expect(out).toBe(
+      '- **只输出一个**合法 JSON 根对象；**不要** Markdown 围栏；\n\n- 根对象必须包含 `customDrawSpec`、`segments` 两个字段。\n- 第二行说明',
+    )
+  })
+
+  it('joins heading blocks with blank line', () => {
+    const out = renderToString(
+      h(Fragment, null,
+        'intro paragraph',
+        '## Section title',
+      ),
+    )
+    expect(out).toBe('intro paragraph\n\n## Section title')
   })
 
   it('nested Fragment flattens correctly', () => {

@@ -1,20 +1,35 @@
 {
   "name": "tsx-prompt",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Zero-dependency, type-safe JSX-based Prompt Engine for LLMs",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./jsx-runtime": {
+      "types": "./dist/jsx-runtime.d.ts",
+      "default": "./dist/jsx-runtime.js"
+    },
+    "./jsx-dev-runtime": {
+      "types": "./dist/jsx-dev-runtime.d.ts",
+      "default": "./dist/jsx-dev-runtime.js"
+    }
+  },
   "files": [
     "dist",
     "README.md",
     "README.zh-CN.md",
-    "LICENSE"
+    "LICENSE",
+    "image.png"
   ],
   "scripts": {
     "build": "tsc",
     "watch": "tsc --watch",
-    "test": "vitest run",
-    "example": "npm run build && npx tsx examples/scene-prompt/run.ts",
+    "test": "vitest run --config vitest.unit.config.ts && vitest run --config vitest.jsx.config.ts",
+    "example": "vitest run --config vitest.unit.config.ts examples/scene-prompt/example.spec.ts",
     "prepublishOnly": "npm run build && npm test"
   },
   "repository": {

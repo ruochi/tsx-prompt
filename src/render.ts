@@ -13,11 +13,54 @@ function isRenderableChild(child: Child): child is VNode | string | number {
   return child != null && typeof child !== 'boolean'
 }
 
-function renderChildrenToRawString(children: Child[], separator = ''): string {
+function isMultilineBlock(text: string): boolean {
+  return text.includes('\n')
+}
+
+function isMarkdownHeadingLine(text: string): boolean {
+  return /^#{1,6}\s/.test(text.trim())
+}
+
+function isMarkdownListLine(text: string): boolean {
+  return /^[-*+]\s/.test(text.trim())
+}
+
+/** Adjacent rendered string parts: block breaks vs inline glue vs list lines. */
+function separatorBetweenRenderedParts(prev: string, curr: string): string {
+  if (!prev || !curr) return ''
+
+  const prevTrimmed = prev.trimEnd()
+  const currTrimmed = curr.trimStart()
+
+  if (isMultilineBlock(prevTrimmed) || isMultilineBlock(currTrimmed)) {
+    return '\n\n'
+  }
+
+  if (isMarkdownHeadingLine(prevTrimmed) || isMarkdownHeadingLine(currTrimmed)) {
+    return '\n\n'
+  }
+
+  if (isMarkdownListLine(prevTrimmed) && isMarkdownListLine(currTrimmed)) {
+    return '\n'
+  }
+
+  return ''
+}
+
+function joinRenderedParts(parts: string[]): string {
+  if (parts.length === 0) return ''
+  let result = parts[0]
+  for (let i = 1; i < parts.length; i++) {
+    result += separatorBetweenRenderedParts(parts[i - 1], parts[i]) + parts[i]
+  }
+  return result
+}
+
+function renderChildrenToRawString(children: Child[]): string {
   const parts = children
     .filter(isRenderableChild)
     .map((child) => renderNodeToRawString(child))
-  return parts.join(separator)
+  return joinRenderedParts(parts)
 }
 
 function renderNodeToRawString(node: VNode | string | number): string {

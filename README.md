@@ -2,7 +2,13 @@
 
 [English](README.md) · [中文](README.zh-CN.md)
 
-Zero-dependency, type-safe **JSX Prompt Engine** for LLMs.
+**Write prompts with JSX. Render plain text.**
+
+Zero runtime dependencies · type-safe · a few kilobytes.
+
+```bash
+npm install tsx-prompt
+```
 
 ---
 
@@ -16,56 +22,36 @@ Zero-dependency, type-safe **JSX Prompt Engine** for LLMs.
 
 **tsx-prompt** lets you write prompts like UI — compose with components, render to plain text. The engine does one thing well: **`renderToString`**. No runtime deps. A few kilobytes.
 
-```bash
-npm install tsx-prompt
-```
+---
+
+## Three core ideas
+
+| | What you get |
+|---|-------------|
+| **Compose** | Prompts as components — split `system` / `user`, branch with TypeScript, reuse blocks across files. |
+| **Clean output** | `renderToString` → plain text for the API. Smart spacing between markdown blocks; no invented DSL. |
+| **Traceable copy** | Static bullets live in `promptTexts`; hover a reference to see the full body in your IDE. |
 
 ---
 
-## Smart Dedent — write indented JSX, ship clean prompts
+## Quick start
 
-Most prompt libraries force you to left-align every line or call `.trim()` yourself. **tsx-prompt bakes in Smart Dedent**:
-
-- **Indent naturally** inside nested JSX and functions — the way you already write React.
-- **Automatically strips** the common leading whitespace from non-empty lines (blank lines ignored when computing indent).
-- **Normalizes** trailing space and collapses runaway blank lines so API payloads stay tight.
-- **Zero config** — every `renderToString` call applies it for you.
-
-```tsx
-function SystemPrompt() {
-  return (
-    <>
-      You are an expert.
-      ## Rules
-      - Rule one
-      - Rule two
-    </>
-  )
-}
-// Output starts at column 0 — no accidental 8-space prefix from your editor indent.
-```
-
-This is the feature that makes large prompt templates *feel* like normal TypeScript instead of a whitespace puzzle.
-
----
-
-## Quick start — split system / user, render twice
-
-**No magic split.** Define two focused components and call `renderToString` twice:
+Two components, two renders. See [`examples/scene-prompt/`](examples/scene-prompt/) (`promptTexts.ts` + `buildPrompt.tsx`).
 
 ```tsx
 /** @jsx h */
 /** @jsxFrag Fragment */
 import { h, Fragment, renderToString } from 'tsx-prompt';
 import { promptTexts } from './promptTexts';
+// h / Fragment: for JSX compile only — you rarely call them directly
 
 function SystemPrompt() {
   return (
     <>
       You are an expert.
-      {'\n\n'}
+
       ## Rules
-      {'\n\n'}
+
       {promptTexts.rules}
     </>
   );
@@ -77,10 +63,13 @@ function UserPrompt(props: { theme: string; items: string[] }) {
       Theme: {props.theme}
       {props.items.length > 0 && (
         <>
-          {'\n\n'}
           ## Items
-          {'\n\n'}
-          {props.items.map((item, i) => `- ${i + 1}. ${item}`)}
+          {props.items.map((item, i) => (
+            <>
+              {i > 0 && '\n'}
+              - {i + 1}. {item}
+            </>
+          ))}
         </>
       )}
     </>
@@ -95,150 +84,77 @@ export function buildPrompt(theme: string, items: string[]) {
 }
 ```
 
-Zero new control-flow syntax — only TypeScript `&&` and `.map()`.
-
 ---
 
-## Text dictionary — hover without duplicating JSDoc
+## Smart Dedent
 
-Duplicating the same bullets in JSDoc and JSX drifts over time. **Write static copy once** in a `promptTexts` module; hover the constant at the call site:
-
-```ts
-// promptTexts.ts
-export const promptTexts = {
-  /**
-   * - Must be a **non-empty markdown string**.
-   * - Describe each segment's focus, icon semantics, and layout.
-   */
-  pptSpecIntro: `
-    - Must be a **non-empty markdown string**.
-    - Describe each segment's focus, icon semantics, and layout.
-  `,
-} as const;
-```
+Indent JSX naturally — like React. **Smart Dedent** strips common leading whitespace on every `renderToString`, so editor nesting never leaks into the API payload.
 
 ```tsx
 function SystemPrompt() {
   return (
     <>
-      ## PPT spec
-      {'\n\n'}
-      {promptTexts.pptSpecIntro}
+      You are an expert.
+      ## Rules
+      - Rule one
     </>
-  );
+  )
 }
-//            ^ hover `promptTexts.pptSpecIntro` → full text in tooltip
+// → output starts at column 0
 ```
 
-**Structure in the TSX file; content on hover.** See [`examples/scene-prompt/`](examples/scene-prompt/).
+---
 
-![Hover `promptTexts.segmentsContract` or thin wrapper components in Cursor / VS Code](./docs/jsdoc-hover.png)
+## Text dictionary
+
+Write static copy once in `promptTexts.ts` (with JSDoc). Reference it in TSX — **structure in the file, content on hover**:
+
+```tsx
+{promptTexts.segmentsContract}
+//  ^ hover → full bullet text in tooltip
+```
+
+![Hover `promptTexts.segmentsContract` in Cursor / VS Code](./image.png)
 
 ---
 
-## Architecture
+## TypeScript setup
 
-| Layer | Exports | Role |
-|-------|---------|------|
-| **Core** | `h`, `Fragment`, `renderToString` | JSX runtime + Smart Dedent |
-| **Sugar** | `Message`, `renderToMessages`, `renderToPromptParts`, `If`, `For` | Optional — see below |
-| **Your code** | `promptTexts`, native `&&` / `.map()`, custom components | Full TS expressiveness |
+### Classic (recommended)
 
----
-
-## TypeScript config
-
-Per-file pragma (recommended):
+Matches the example above — explicit and easy to copy.
 
 ```tsx
 /** @jsx h */
 /** @jsxFrag Fragment */
+import { h, Fragment, renderToString } from 'tsx-prompt';
 ```
 
-Or global `tsconfig.json`:
+Or in `tsconfig.json`: `"jsx": "react"`, `"jsxFactory": "h"`, `"jsxFragmentFactory": "Fragment"`.
 
-```json
-{
-  "compilerOptions": {
-    "jsx": "react",
-    "jsxFactory": "h",
-    "jsxFragmentFactory": "Fragment"
-  }
-}
-```
+### Automatic JSX Runtime (optional)
 
----
-
-## Chat messages (`renderToMessages`)
-
-When you need an array of `{ role, content }` for the API:
+If your project already uses `"jsx": "react-jsx"`, set `"jsxImportSource": "tsx-prompt"`. Prompt files then only need:
 
 ```tsx
-import { h, renderToMessages, Message } from 'tsx-prompt'
-
-const messages = renderToMessages(
-  <>
-    <Message role="system">You are an SVG animation expert.</Message>
-    <Message role="user">Draw a pulsing red circle.</Message>
-    <Message role="assistant">{'```xml\n<svg>...</svg>\n```'}</Message>
-  </>,
-)
-
-<Message role="developer">Platform instructions.</Message>
-<Message role="tool" tool_call_id="call_abc">{"result": 42}</Message>
+import { renderToString } from 'tsx-prompt';
 ```
+
+The compiler pulls factories from `tsx-prompt/jsx-runtime`. Rendering is identical to Classic.
 
 ---
 
-## Custom formatting (bring your own)
+## Compatibility (legacy APIs)
 
-`Section`, `Quote`, etc. are **not** built in — define what you need, or use inline `##` headings.
+You rarely need these in new projects.
 
----
+| API | Notes |
+|-----|--------|
+| `Message` + `renderToMessages` | Build `{ role, content }[]` from tagged blocks |
+| `renderToPromptParts` | Magic-split system/user from one tree — prefer two `renderToString` calls |
+| `<If>` / `<For>` | Use native `{cond && ...}` and `{arr.map()}` instead |
 
-## Example project
-
-[`examples/scene-prompt/`](examples/scene-prompt/) — `SystemPrompt` + `UserPrompt` + `buildPrompt()` + `promptTexts.ts`:
-
-```bash
-npm run example
-npm test
-```
-
----
-
-## Optional sugar (you rarely need these)
-
-### `Message` + `renderToPromptParts`
-
-For a **single file** that reads top-to-bottom with multiple `<Message role="...">` blocks, you can let the engine split roles:
-
-```tsx
-import { Message, renderToPromptParts } from 'tsx-prompt';
-
-const { systemRole, userRole } = renderToPromptParts(
-  <>
-    <Message role="system">...</Message>
-    <Message role="user">...</Message>
-  </>,
-);
-```
-
-Prefer **two components + two `renderToString` calls** when you want explicit, zero-magic boundaries.
-
-### `<If>` and `<For>`
-
-Legacy helpers. Native `{cond && ...}` and `{arr.map()}` work identically — use those in new code.
-
-```tsx
-// Prefer:
-{items.length > 0 && items.map((x) => `- ${x}`)}
-
-// Instead of:
-<If condition={items.length > 0}>
-  <For each={items} render={(x) => `- ${x}`} />
-</If>
-```
+`Section`, `Quote`, etc. are **not** built in — use inline `##` headings or your own helpers.
 
 ---
 
